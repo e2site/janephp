@@ -27,6 +27,8 @@ trait GetTransformResponseBodyTrait
             new Stmt\Expression(new Expr\Assign(new Expr\Variable('status'), new Expr\MethodCall(new Expr\Variable('response'), 'getStatusCode'))),
             new Stmt\Expression(new Expr\Assign(new Expr\Variable('body'), new Expr\Cast\String_(new Expr\MethodCall(new Expr\Variable('response'), 'getBody')))),
         ];
+
+
         $outputTypes = $context->getRegistry()->getThrowUnexpectedStatusCode() ? [] : ['null'];
         $throwTypes = [];
 
@@ -216,6 +218,12 @@ EOD
 
         // Avoid useless imbrication of ifs
         if (\count($statements) === 1 && $statements[0] instanceof Stmt\If_) {
+
+            $newStatus= str_replace('X','[0-9]',$status);
+            $newStatus = '/^'.$newStatus.'$/';
+
+            $pattern = new Node\Arg(new Scalar\String_($newStatus));
+
             return [$returnTypes, $throwTypes, [new Stmt\If_(
                 new Expr\BinaryOp\BooleanAnd(
                     new Expr\BinaryOp\Identical(
@@ -225,9 +233,9 @@ EOD
                         new Expr\ConstFetch(new Name('false'))
                     ),
                     new Expr\BinaryOp\BooleanAnd(
-                        new Expr\BinaryOp\Identical(
-                            new Scalar\LNumber((int) $status),
-                            new Expr\Variable('status')
+                        new Expr\FuncCall(
+                            new Node\Name('preg_match'), // Имя вызываемой функции
+                            [ $pattern,  new Expr\Variable('status')] // Массив аргументов
                         ),
                         $statements[0]->cond
                     )
